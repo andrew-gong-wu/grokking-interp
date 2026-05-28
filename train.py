@@ -1,0 +1,83 @@
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
+import numpy as np
+
+from data import generate_data
+from transformer import Transformer 
+
+
+Xtr, Ytr, Xte, Yte = generate_data()
+model = Transformer()
+
+# lr: 0.001
+# weight decay=1.0: each parameter gets multiplied by (1 - lr*wd) = 0.999, which shrinks them
+# betas: moving average of gradient/squared gradient
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1.0, betas=(0.9, 0.98))
+# starts learning rate at 0 and ramps it up to 0.001 linearly
+scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: min(step/10, 1))
+
+# total number of epochs
+M = 40000
+
+# we need to log the train and test losses
+train_loss = []
+test_loss = []
+
+# log the train and test accuracies
+train_acc = []
+test_acc = []
+
+@torch.no_grad()
+def split_loss_acc(split, model):
+
+    # allows us to calculate loss for either train or test
+    X,Y = {
+        'train': (Xtr, Ytr),
+        'test': (Xte, Yte)
+    }[split]
+
+    # calculates loss
+    logits = model(X)
+    loss = F.cross_entropy(logits, Y)
+
+    # calculates accuracy
+    # logits is Xlen x 113. we want the position of the maximum in the 113
+    predictions = logits.argmax(dim = 1)
+    accuracy = (predictions == Y).float().mean().item()
+
+    return [loss.item(), accuracy]
+
+
+
+for epoch in range(M):
+
+    # forward 
+    logits = model(Xtr)
+    loss = F.cross_entropy(logits, Ytr)
+
+    
+
+    # backward
+    loss.backward()
+    optimizer.step()
+    scheduler.step()
+    optimizer.zero_grad()
+
+    if epoch % 100 == 0:
+
+        # log train and test losses
+        train_loss_acc = split_loss_acc('train', model)
+        test_loss_acc = split_loss_acc('test', model)
+        train_loss.append(train_loss_acc[0])
+        test_loss.append(test_loss_acc[0])
+        train_acc.append(train_loss_acc[1])
+        test_acc.append(test_loss_acc[1])
+
+        # print losses for monitoring behavior
+        print(f"Epoch {epoch}, train loss: {loss.item():.4f}")
+        print(f"Epoch {epoch}, test loss: {test_loss_acc[0]:.4f}")
+
+        
+
+    

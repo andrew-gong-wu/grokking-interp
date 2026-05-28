@@ -24,5 +24,3 @@ def generate_data(N=113, frac_train=0.3, s=15343489):
     Xtr, Ytr, Xte, Yte = torch.tensor(Xtr), torch.tensor(Ytr), torch.tensor(Xte), torch.tensor(Yte)
     print(Xtr.shape)
     return Xtr, Ytr, Xte, Yte
-
-generate_data()
