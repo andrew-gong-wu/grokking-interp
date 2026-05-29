@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
 import numpy as np
+import matplotlib.pyplot as plt
 
 from data import generate_data
 from transformer import Transformer 
@@ -78,6 +78,10 @@ for epoch in range(M):
         print(f"Epoch {epoch}, train loss: {loss.item():.4f}")
         print(f"Epoch {epoch}, test loss: {test_loss_acc[0]:.4f}")
 
-        
+# save loss and accuracy for plotting
+# update to ensure it saves to relative filepath, not absolute one. had to dredge it up from somewhere
+np.savez('logs.npz', train_loss=train_loss, test_loss=test_loss,
+         train_acc=train_acc, test_acc=test_acc)
 
-    
+# save model to save weights
+torch.save(model.state_dict(), 'model.pth')
