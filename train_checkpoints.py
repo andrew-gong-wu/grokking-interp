@@ -6,6 +6,7 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 from data import generate_data
 from transformer import Transformer 
@@ -23,6 +24,8 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda step: min(step/1
 
 # total number of epochs - reduce to 10000 because the model groks pretty early
 M = 10000
+N = 113
+
 
 # we need to log the train and test losses
 train_loss = []
@@ -39,36 +42,20 @@ test_acc = []
 # create fourier basis, get all_data, key mask (code from analysis.ipynb)
 # ------------------------------------------------------------
 fourier_basis = []
-for k in range(1,M):
+for k in range(1,57):
     # each sin basis vector looks as follows: [sin((2kpi*0)/113), sin((2kpi*1)/113), ..., sin((2kpi*112)/113)]
     fourier_basis.append([math.sin(2 * k * math.pi * x / N) for x in range(N)])
 
-for k in range(1,M):
+for k in range(1,57):
     # each cos basis vector looks as follows: [cos((2kpi*0)/113), cos((2kpi*1)/113), ..., cos((2kpi*112)/113)]
     fourier_basis.append([math.cos(2 * k * math.pi * x / N) for x in range(N)])
 
 # add the all-ones vector
 fourier_basis.append([1] * N)
-fourier_basis = torch.tensor(fourier_basis)
+fourier_basis = torch.tensor(fourier_basis).float()
 
 # normalize
 fourier_basis = F.normalize(fourier_basis, dim = 1)
-
-# to store the data
-all_data = np.zeros((N**2, 4), dtype = int)
-
-# generate 113^2 pairs 
-N = 113
-for i in range(N):
-    for j in range(N):
-        # i + j = (i + j) mod N
-        # we code = as N itself
-        all_data[i*N + j] = [i,j,N, (i+j) % N]
-
-# get inputs and outputs
-all_data = torch.tensor(all_data)
-all_Ys = all_data[:,3]
-all_data = all_data[:,:3]
 
 key_freqs = [13, 19, 35, 39, 49]
 key_mask = torch.zeros(113)
@@ -133,7 +120,7 @@ for epoch in range(M):
         print(f"Epoch {epoch}, test loss: {test_loss_acc[0]:.4f}")
 
         with torch.no_grad():
-            logits = model(all_data)
+            logits = model(Xte)
             coeffs = logits @ fourier_basis.T
 
             restricted = coeffs * key_mask
@@ -142,15 +129,16 @@ for epoch in range(M):
             restricted_logits = restricted @ fourier_basis
             excluded_logits = excluded @ fourier_basis
         
-            restricted_loss.append(F.cross_entropy(restricted_logits, all_Ys).item())
-            excluded_loss.append(F.cross_entropy(excluded_logits, all_Ys).item())
+            restricted_loss.append(F.cross_entropy(restricted_logits, Yte).item())
+            excluded_loss.append(F.cross_entropy(excluded_logits, Yte).item())
 
     
 
 # save loss and accuracy for plotting
 # update to ensure it saves to relative filepath, not absolute one. had to dredge it up from somewhere
-np.savez('logs.npz', train_loss=train_loss, test_loss=test_loss,
-         train_acc=train_acc, test_acc=test_acc)
+np.savez('logs_progress.npz', train_loss=train_loss, test_loss=test_loss,
+            train_acc=train_acc, test_acc=test_acc,
+            restricted_loss=restricted_loss, excluded_loss=excluded_loss)
 
 # save model to save weights
 torch.save(model.state_dict(), 'model.pth')
