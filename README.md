@@ -4,7 +4,7 @@ Replication of [Progress Measures for Grokking via Mechanistic Interpretability]
 
 ## What is this?
 
-A 1-layer transformer trained from scratch on modular addition (mod 113)  memorizes the training data quickly, then generalizes later (in this case, a few thousand epochs later). This project reverse-engineers the algorithm with Fourier analysis.
+A 1-layer transformer trained from scratch on modular addition (mod 113)  memorizes the training data quickly. It generalizes a few thousand epochs later. This project reverse-engineers the algorithm with Fourier analysis, as in the original paper.
 
 ![Train and test loss](figures/loss.png)
 
@@ -16,7 +16,7 @@ A 1-layer transformer trained from scratch on modular addition (mod 113)  memori
 
 ## Key findings
 
-The embedding matrix concentrates its energy on a sparse set of key frequencies (13, 19, 35, 39, 49), and individual MLP neurons are tuned to specific frequencies in that set.
+The embedding matrix focuses on a sparse set of key frequencies (13, 19, 39, 49). Individual MLP neurons are tuned to specific frequencies in that set. The original paper gets five key frequencies; I get four; I assume different random seeds might lead to different numbers. 
 
 ![Fourier energy of embedding matrix](figures/neurons_tuning.png)
 
